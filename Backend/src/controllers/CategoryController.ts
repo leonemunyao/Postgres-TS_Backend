@@ -51,6 +51,34 @@ export class CategoryController {
   }
 
   /**
+   * Get a category by ID
+   * @param req Express request object
+   * @param res Express response object
+   */
+  public async getCategoryById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const category = await this.categoryService.getCategoryById(parseInt(id));
+      if (!category) {
+        res.status(404).json({ error: 'Category not found' });
+      } else {
+        res.json(category);
+      }
+    } catch (error) {
+      console.error('Get category by ID error:', error);
+      if (error instanceof Error) {
+        if (error.message === 'Category not found') {
+          res.status(404).json({ error: error.message });
+        } else {
+          res.status(500).json({ error: 'Failed to fetch category' });
+        }
+      } else {
+        res.status(500).json({ error: 'Failed to fetch category' });
+      }
+    }
+  }
+
+  /**
    * Update a category (admin only)
    * @param req Express request object
    * @param res Express response object

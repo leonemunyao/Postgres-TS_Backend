@@ -9,6 +9,39 @@ export class UserController {
   }
 
   /**
+   * Get all users (admin only)
+   */
+  public async getAllUsers(req: Request, res: Response): Promise<void> {
+    try {
+      const users = await this.userService.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      res.status(500).json({ error: 'Failed to fetch users' });
+    }
+  }
+
+  /**
+   * Get user by ID
+   */
+  public async getUserById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const user = await this.userService.getUserById(parseInt(id));
+      
+      if (!user) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      res.status(500).json({ error: 'Failed to fetch user' });
+    }
+  }
+
+  /**
    * Create new user account
    */
   public async createUser(req: Request, res: Response): Promise<void> {

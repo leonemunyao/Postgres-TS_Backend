@@ -13,25 +13,25 @@ const authController = new AuthController();
 // Register new user
 router.post('/register',
   validators.validateRegistration,
-  authController.register
+  (req: Request, res: Response, next: NextFunction) => authController.register(req, res).catch(next)
 );
 
 // Login user
 router.post('/login',
   validators.validateLogin,
-  authController.login
+  (req: Request, res: Response, next: NextFunction) => authController.login(req, res).catch(next)
 );
 
 // Request password reset
 router.post('/forgot-password',
   validators.validateEmail,
-  authController.forgotPassword
+  (req: Request, res: Response, next: NextFunction) => authController.forgotPassword(req, res).catch(next)
 );
 
 // Reset password with token
 router.post('/reset-password',
   validators.validatePasswordReset,
-  authController.resetPassword
+  (req: Request, res: Response, next: NextFunction) => authController.resetPassword(req, res).catch(next)
 );
 
 /**
@@ -41,7 +41,7 @@ router.post('/reset-password',
 // Logout user (requires auth)
 router.post('/logout',
   authenticateToken,
-  authController.logout
+  (req: Request, res: Response, next: NextFunction) => authController.logout(req, res).catch(next)
 );
 
 /**

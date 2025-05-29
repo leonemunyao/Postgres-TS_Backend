@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { NextFunction, Request, Response, RequestHandler } from "express";
 
 /**
  * Validation utility functions
@@ -11,12 +11,17 @@ export const validators = {
   },
 
   // Email validation middleware
-  validateEmail: (req: Request, res: Response, next: NextFunction) => {
+  validateEmail: ((req: Request, res: Response, next: NextFunction) => {
     const { email } = req.body;
-    if (!validators.isValidEmail(email)) {
-      throw new Error('Invalid email format');
+    try {
+      if (!validators.isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      next();
+    } catch (error) {
+      res.status(400).json({ error: 'Email validation failed' });
     }
-  },
+  }) as RequestHandler,
 
   //Registration validation
   isValidRegistration: (email: string, password: string, role: string): boolean => {
@@ -24,12 +29,23 @@ export const validators = {
   },
 
   // Registration validation middleware
-  validateRegistration: (req: Request, res: Response, next: NextFunction) => {
-    const { email, password, role } = req.body;
-    if (!validators.isValidRegistration(email, password, role)) {
-      throw new Error('Invalid registration details');
+  validateRegistration: ((req: Request, res: Response, next: NextFunction) => {
+    const { email, password, name } = req.body;
+    try {
+      if (!email || !password || !name) {
+        return res.status(400).json({ error: 'All fields are required' });
+      }
+      if (!validators.isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      if (!validators.isValidPassword(password)) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
+      next();
+    } catch (error) {
+      res.status(400).json({ error: 'Registration validation failed' });
     }
-  },
+  }) as RequestHandler,
 
   //Password validation
   isValidPassword: (password: string): boolean => {
@@ -49,12 +65,20 @@ export const validators = {
   },
 
   // Login validation middleware
-  validateLogin: (req: Request, res: Response, next: NextFunction) => {
+  validateLogin: ((req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body;
-    if (!validators.isValidLogin(email, password)) {
-      throw new Error('Invalid login details');
+    try {
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+      if (!validators.isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+      next();
+    } catch (error) {
+      res.status(400).json({ error: 'Login validation failed' });
     }
-  },
+  }) as RequestHandler,
 
   // Password reset validation
   isValidatePasswordReset: (email: string, password: string, token: string): boolean => {

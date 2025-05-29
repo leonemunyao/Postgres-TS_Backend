@@ -9,7 +9,12 @@ const prisma = new PrismaClient();
 declare global {
   namespace Express {
     interface Request {
-      user?: any;
+      user?: {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+      };
     }
   }
 }
@@ -31,7 +36,13 @@ export const authenticateToken = async (
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
     const user = await prisma.user.findUnique({
-      where: { id: (decoded as any).userId }
+      where: { id: (decoded as any).userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      }
     });
 
     if (!user) {

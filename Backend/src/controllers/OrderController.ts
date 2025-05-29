@@ -1,17 +1,28 @@
 import { Request, Response } from 'express';
 import { OrderService } from '../services/OrderService';
 import { OrderStatus } from '../models/OrderModel';
+import { CartService } from '../services/CartService';
 
 export class OrderController {
   private orderService: OrderService;
+  private cartService: CartService;
 
   constructor() {
-    this.orderService = new OrderService();
+    this.orderService = new OrderService(null as unknown as CartService);
+    this.cartService = new CartService(this.orderService);
+    this.orderService.setCartService(this.cartService);
+  }
+
+  private ensureUser(req: Request) {
+    if (!req.user) {
+      throw new Error('User not authenticated');
+    }
+    return req.user;
   }
 
   public async createOrder(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user.id;
+      const userId = this.ensureUser(req).id;
       const orderData = req.body;
       
       const order = await this.orderService.createOrder(userId, orderData);
@@ -44,7 +55,7 @@ export class OrderController {
 
   public async getUserOrders(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user.id;
+      const userId = this.ensureUser(req).id;
       const orders = await this.orderService.getUserOrders(userId);
       res.json(orders);
     } catch (error) {
@@ -56,8 +67,8 @@ export class OrderController {
   public async getOrderById(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
-      const isAdmin = req.user.isAdmin;
+      const userId = this.ensureUser(req).id;
+      const isAdmin = this.ensureUser(req).role === 'admin';
 
       const order = await this.orderService.getOrderById(parseInt(id), isAdmin ? undefined : userId);
       
@@ -113,7 +124,7 @@ export class OrderController {
   public async cancelOrder(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const userId = req.user.id;
+      const userId = this.ensureUser(req).id;
 
       const cancelledOrder = await this.orderService.cancelOrder(parseInt(id), userId);
       res.json(cancelledOrder);

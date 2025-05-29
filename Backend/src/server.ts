@@ -29,23 +29,26 @@ app.use(cors({
 
 // Root Route
 app.get('/', (req, res) => {
-    res.send('Welcome to the TFootwera E-commerce API');
+    res.send('Welcome to the TFootwear E-commerce API');
 });
 
-// Aply token blacklist check middleware before protected routes
-app.use(tokenBlacklistMiddleware);
 
 // Mount Routes
+
+// Public Routes (no authentication required)
 app.use('/api/auth', authRoutes); 
-app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/cart', cartRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/search', searchRoutes);
+
+// Protected Routes (authentication required)
+// Apply token blacklist check middleware before protected routes
+app.use(tokenBlacklistMiddleware);
+app.use('/api/users', userRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/shipping', shippingRoutes);
 
 // Error handling middleware

@@ -70,6 +70,9 @@ export class CategoryService {
     return this.buildCategoryTree(categories);
   }
 
+
+  
+
   /**
    * Build category tree with nested sub-categories
    * @param categories Flat array of categories
@@ -204,6 +207,12 @@ export class CategoryService {
 
     await this.prisma.category.deleteMany();
   }
+
+  /**
+   * Get a category by ID
+   * @param id Category ID
+   * @returns Category object or null if not found
+   */
 
   async getCategoryById(id: number): Promise<Category | null> {
     return this.prisma.category.findUnique({

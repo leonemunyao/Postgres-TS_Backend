@@ -1,5 +1,6 @@
 import { PrismaClient, Payment } from '@prisma/client';
 import { OrderService } from './OrderService';
+import { CartService } from './CartService';
 import axios from 'axios';
 import { 
   IPesapalPaymentRequest, 
@@ -25,9 +26,9 @@ export class PaymentService {
     callbackUrl: string;
   };
 
-  constructor() {
+  constructor(cartService: CartService) {
     this.prisma = new PrismaClient();
-    this.orderService = new OrderService();
+    this.orderService = new OrderService(cartService);
     this.pesapalConfig = {
       consumerKey: process.env.PESAPAL_CONSUMER_KEY!,
       consumerSecret: process.env.PESAPAL_CONSUMER_SECRET!,
@@ -258,5 +259,99 @@ export class PaymentService {
     );
 
     return response.data.token;
+  }
+
+  /**
+   * Gets order details for payment
+   * @param orderId - The ID of the order
+   * @param userId - The ID of the user requesting the details
+   */
+  async getOrderDetails(orderId: number, userId: number) {
+    const order = await this.prisma.order.findFirst({
+      where: { 
+        id: orderId,
+        userId
+      }
+    });
+
+    return order;
+  }
+
+  /**
+   * Creates a new payment record
+   */
+  public async createPayment(
+    orderId: number,
+    amount: number,
+    paymentMethod: string,
+    status: PaymentStatus = 'pending',
+    currency: string = 'KES'
+  ) {
+    return this.prisma.payment.create({
+      data: {
+        orderId,
+        amount,
+        currency,
+        paymentMethod,
+        status,
+        createdAt: new Date()
+      }
+    });
+  }
+
+  /**
+   * Updates payment status
+   */
+  public async updatePaymentStatus(
+    orderId: number,
+    status: PaymentStatus
+  ) {
+    return this.prisma.payment.update({
+      where: { orderId },
+      data: {
+        status,
+        updatedAt: status === 'completed' ? new Date() : undefined
+      }
+    });
+  }
+
+  /**
+   * Handles successful payment
+   */
+  public async handleSuccessfulPayment(orderId: number) {
+    // Update payment status
+    await this.updatePaymentStatus(orderId, 'completed');
+
+    // Update order status
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'paid' }
+    });
+
+    // Clear the user's cart
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { userId: true }
+    });
+
+    if (order) {
+      await this.prisma.cartItem.deleteMany({
+        where: { userId: order.userId }
+      });
+    }
+  }
+
+  /**
+   * Handles failed payment
+   */
+  public async handleFailedPayment(orderId: number) {
+    // Update payment status
+    await this.updatePaymentStatus(orderId, 'failed');
+
+    // Update order status
+    await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: 'payment_failed' }
+    });
   }
 }

@@ -1,5 +1,6 @@
 import { PrismaClient, Shipping } from '@prisma/client';
 import { OrderService } from './OrderService';
+import { CartService } from './CartService';
 import { 
   ICreateShipping, 
   IUpdateShipping, 
@@ -10,9 +11,9 @@ export class ShippingService {
   private prisma: PrismaClient;
   private orderService: OrderService;
 
-  constructor() {
+  constructor(cartService: CartService) {
     this.prisma = new PrismaClient();
-    this.orderService = new OrderService();
+    this.orderService = new OrderService(cartService);
   }
 
   /**

@@ -1,15 +1,11 @@
-import { PrismaClient, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import prisma from '../utils/prisma';
 
 export class UserService {
-  private prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
 
   async getAllUsers(): Promise<Partial<User>[]> {
-    const users = await this.prisma.user.findMany({
+    const users = await prisma.user.findMany({
       select: {
         id: true,
         name: true,
@@ -25,7 +21,7 @@ export class UserService {
   }
 
   async getUserById(id: number): Promise<Partial<User> | null> {
-    return this.prisma.user.findUnique({
+    return prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
@@ -41,7 +37,7 @@ export class UserService {
   async createUser(data: { name: string; email: string; password: string }): Promise<Partial<User>> {
     const hashedPassword = await bcrypt.hash(data.password, 10);
     
-    return this.prisma.user.create({
+    return prisma.user.create({
       data: {
         ...data,
         password: hashedPassword,
@@ -60,7 +56,7 @@ export class UserService {
   async updateUser(id: number, data: { name: string; email: string; password: string }): Promise<Partial<User> | null> {
     const hashedPassword = await bcrypt.hash(data.password, 10);
 
-    return this.prisma.user.update({
+    return prisma.user.update({
       where: { id },
       data: {
         ...data,
@@ -81,7 +77,7 @@ export class UserService {
       data.password = await bcrypt.hash(data.password, 10);
     }
 
-    return this.prisma.user.update({
+    return prisma.user.update({
       where: { id },
       data,
       select: {
@@ -95,17 +91,17 @@ export class UserService {
   }
 
   async deleteUser(id: number): Promise<void> {
-    await this.prisma.user.delete({
+    await prisma.user.delete({
       where: { id }
     });
   }
 
   async deleteAllUsers(): Promise<void> {
-    await this.prisma.user.deleteMany();
+    await prisma.user.deleteMany();
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.prisma.user.findUnique({
+    return prisma.user.findUnique({
       where: { email }
     });
   }

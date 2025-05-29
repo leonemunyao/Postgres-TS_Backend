@@ -1,21 +1,32 @@
 import { Request, Response } from 'express';
 import { ShippingService } from '../services/ShippingService';
 import { ShippingStatus } from '../models/ShippingModel';
+import { CartService } from '../services/CartService';
+import { OrderService } from '../services/OrderService';
 
 export class ShippingController {
     private shippingService: ShippingService;
 
     constructor() {
-        this.shippingService = new ShippingService();
+        const cartService = new CartService(null!);  // Break circular dependency
+        const orderService = new OrderService(cartService);
+        cartService.setOrderService(orderService);  // Set the order service after creation
+        this.shippingService = new ShippingService(cartService);
     }
 
+    private ensureUser(req: Request) {
+        if (!req.user) {
+            throw new Error('User not authenticated');
+        }
+        return req.user;
+    }
     /**
      * Creates shipping details for an order
      */
     public async createShipping(req: Request, res: Response): Promise<void> {
         try {
             const shippingDetails = req.body;
-            const userId = req.user.id;
+            const userId = this.ensureUser(req).id;
 
             const shipping = await this.shippingService.createShipping(shippingDetails, userId);
             res.status(201).json(shipping);
@@ -31,7 +42,7 @@ export class ShippingController {
     public async getShippingDetails(req: Request, res: Response): Promise<void> {
         try {
             const { orderId } = req.params;
-            const userId = req.user.id;
+            const userId = this.ensureUser(req).id;
 
             const shipping = await this.shippingService.getShippingDetails(Number(orderId), userId);
             res.json(shipping);
@@ -48,7 +59,7 @@ export class ShippingController {
         try {
             const { status } = req.params;
             
-            if (!req.user.isAdmin) {
+            if (this.ensureUser(req).role !== 'admin') {
                 res.status(403).json({ error: 'Unauthorized to view shipping by status' });
                 return;
             }
@@ -72,7 +83,7 @@ export class ShippingController {
     public async updateShippingDetails(req: Request, res: Response): Promise<void> {
         try {
             const { orderId } = req.params;
-            const userId = req.user.id;
+            const userId = this.ensureUser(req).id;
             const updates = req.body;
 
             const shipping = await this.shippingService.updateShippingDetails(
@@ -95,7 +106,7 @@ export class ShippingController {
             const { shippingId } = req.params;
             const { status, trackingNumber } = req.body;
 
-            if (!req.user.isAdmin) {
+            if (this.ensureUser(req).role !== 'admin') {
                 res.status(403).json({ error: 'Unauthorized to update shipping status' });
                 return;
             }
@@ -122,7 +133,7 @@ export class ShippingController {
      */
     public async getAllShipping(req: Request, res: Response): Promise<void> {
         try {
-            if (!req.user.isAdmin) {
+            if (this.ensureUser(req).role !== 'admin') {
                 res.status(403).json({ error: 'Unauthorized to view all shipping details' });
                 return;
             }
@@ -141,7 +152,7 @@ export class ShippingController {
     public async deleteShipping(req: Request, res: Response): Promise<void> {
         try {
             const { orderId } = req.params;
-            const userId = req.user.id;
+            const userId = this.ensureUser(req).id;
 
             await this.shippingService.deleteShipping(Number(orderId), userId);
             res.status(204).send();

@@ -1,4 +1,4 @@
-// Defines the structure for Payment data
+  // Defines the structure for Payment data
 export interface IPayment {
   id: number;
   orderId: number;

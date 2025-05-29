@@ -8,10 +8,14 @@ export class OrderService {
   private cartService: CartService;
   private productService: ProductService;
 
-  constructor() {
+  constructor(cartService: CartService) {
     this.prisma = new PrismaClient();
-    this.cartService = new CartService();
+    this.cartService = cartService;
     this.productService = new ProductService();
+  }
+
+  public setCartService(cartService: CartService) {
+    this.cartService = cartService;
   }
 
   async createOrder(userId: number, orderData: ICreateOrder): Promise<Order> {

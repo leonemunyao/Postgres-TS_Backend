@@ -1,10 +1,17 @@
 import { PrismaClient, Cart, CartItem, Product } from '@prisma/client';
+import { OrderService } from './OrderService';
 
 export class CartService {
   private prisma: PrismaClient;
+  private orderService: OrderService;
 
-  constructor() {
+  constructor(orderService: OrderService) {
     this.prisma = new PrismaClient();
+    this.orderService = orderService;
+  }
+
+  public setOrderService(orderService: OrderService): void {
+        this.orderService = orderService;
   }
 
   async getOrCreateCart(userId: number): Promise<Cart> {
@@ -60,6 +67,7 @@ export class CartService {
     return this.prisma.cartItem.create({
       data: {
         cartId: cart.id,
+        userId,
         productId,
         quantity
       },
@@ -89,35 +97,46 @@ export class CartService {
   }
 
   async updateCartItem(userId: number, itemId: number, quantity: number): Promise<CartItem> {
-    const cart = await this.getOrCreateCart(userId);
-    
-    // Verify item belongs to user's cart
-    const cartItem = await this.prisma.cartItem.findFirst({
-      where: {
-        id: itemId,
-        cartId: cart.id
-      },
-      include: {
-        product: true
+    try {
+      const cart = await this.getOrCreateCart(userId);
+      
+      // Verify item belongs to user's cart
+      const cartItem = await this.prisma.cartItem.findFirst({
+        where: {
+          id: itemId,
+          cartId: cart.id
+        },
+        include: {
+          product: true
+        }
+      });
+
+      if (!cartItem) {
+        throw new Error('Cart item not found');
       }
-    });
 
-    if (!cartItem) {
-      throw new Error('Cart item not found');
-    }
-
-    // Check stock availability
-    if (cartItem.product.stock < quantity) {
-      throw new Error('Insufficient stock');
-    }
-
-    return this.prisma.cartItem.update({
-      where: { id: itemId },
-      data: { quantity },
-      include: {
-        product: true
+      // Check stock availability
+      if (cartItem.product.stock < quantity) {
+        throw new Error('Insufficient stock');
       }
-    });
+
+      const updatedItem = await this.prisma.cartItem.update({
+        where: { id: itemId },
+        data: { quantity },
+        include: {
+          product: true
+        }
+      });
+
+      if (!updatedItem) {
+        throw new Error('Failed to update cart item');
+      }
+
+      return updatedItem;
+    } catch (error) {
+      console.error('Error in updateCartItem:', error);
+      throw error;
+    }
   }
 
   async removeFromCart(userId: number, itemId: number): Promise<void> {
@@ -154,16 +173,25 @@ export class CartService {
     }, 0);
   }
 
-  async initiateCheckout(userId: number): Promise<{ total: number; items: CartItem[] }> {
+  async initiateCheckout(userId: number): Promise<{ orderId: number; total: number; items: CartItem[] }> {
     const cart = await this.getCart(userId);
     
     if (cart.items.length === 0) {
       throw new Error('Cart is empty');
     }
 
+    // Create order from cart items
+    const order = await this.orderService.createOrder(userId, {
+      items: cart.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }))
+    });
+
     const total = await this.getCartTotal(userId);
 
     return {
+      orderId: order.id,
       total,
       items: cart.items
     };
